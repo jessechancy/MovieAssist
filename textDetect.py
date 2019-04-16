@@ -86,7 +86,7 @@ def drawBoxes(image, boxes):
         cv2.rectangle(image, (x0, y0), (x1, y1), (0,255,0), 2)
     return image
 
-path = "testPosters/poster8.jpg"
+path = "testPosters/poster6.jpg"
 pathEAST = "frozen_east_text_detection.pb"
 
 def detectText(path, pathEAST):
