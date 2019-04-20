@@ -7,15 +7,10 @@ import os
 import pytesseract
 from PIL import Image
 
-## Loading EAST Detection
-#https://www.learnopencv.com/deep-learning-based-text-detection-using-opencv-c-python/
-
-#https://www.pyimagesearch.com/2018/08/20/opencv-text-detection-east-text-detector/
-
-## get image through cv2
-
+## LOADING EAST DETECTION Code Source: https://www.pyimagesearch.com/2018/08/20/opencv-text-detection-east-text-detector/
 
 #gets image from path and resizes for EAST detection
+#Idea for resizing taken from https://www.pyimagesearch.com/2018/08/20/opencv-text-detection-east-text-detector/
 def getImg(path):
     aspectRatio = (320,480)
     image = cv2.imread(path)
@@ -23,9 +18,6 @@ def getImg(path):
     scaledImage = cv2.resize(image, (320,480))
     resizeX, resizeY = w/aspectRatio[0], h/aspectRatio[1]
     return image, scaledImage, resizeX, resizeY
-
-
-## Takes in image, spits our bounding box (image needs to be w,h multiples of 32)
 
 pathEAST = "frozen_east_text_detection.pb"
 
@@ -44,6 +36,7 @@ def applyMaps(path, image):
     return scores, geometry
 
 # loop over the number of columns
+#https://www.pyimagesearch.com/2018/08/20/opencv-text-detection-east-text-detector/
 def boundingBox(scores, geometry):
     boxes = []
     confidences = []
@@ -68,6 +61,7 @@ def boundingBox(scores, geometry):
     return boxes, confidences
 
 #destructively resizes boxes to original size
+#https://www.pyimagesearch.com/2018/08/20/opencv-text-detection-east-text-detector/
 def resizeBoxes(boxes, confidences, resizeX, resizeY):
     boxes = non_max_suppression(np.array(boxes), probs=confidences)
     newBoxes = []
@@ -86,7 +80,7 @@ def drawBoxes(image, boxes):
         cv2.rectangle(image, (x0, y0), (x1, y1), (0,255,0), 2)
     return image
 
-path = "testPosters/poster6.jpg"
+path = "testPosters/poster3.jpg"
 pathEAST = "frozen_east_text_detection.pb"
 
 def detectText(path, pathEAST):
@@ -107,7 +101,7 @@ def detectVideoText(pathEAST):
     while True:
         _, frame = cap.read()
         if frames % 10 == 0:
-            ## We want to freeze frame and add a loading screen
+            #Want to freeze frame and add a loading screen
             h,w,_ = frame.shape
             scaledFrame = cv2.resize(frame, (320,480))
             resizeX, resizeY = w/aspectRatio[0], h/aspectRatio[1]
@@ -124,7 +118,10 @@ def detectVideoText(pathEAST):
     cv2.destroyAllWindows()
 
 
+
 ## Research for better methods of segmenting text
+#Inspired by https://www.researchgate.net/publication/280105485_Text_Extraction_and_Recognition_from_Posters_for_Movie_Title_Retrieval
+
 
 def binarization(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
