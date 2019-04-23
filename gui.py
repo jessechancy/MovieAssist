@@ -4,7 +4,8 @@ import cv2
 from tkinter import *
 import string
 from PIL import Image, ImageTk
-from text_detect_v2 import text_detect, bounding_boxes
+from text_detect_v2 import text_detect, bounding_boxes, spell_check
+from movie_processor import movie_info, movie_poster, movie_recommend
 
 ## Notes
 
@@ -72,11 +73,6 @@ def size_to_canvas(data, button_coord):
     y1 = y1 * height_scale
     return (x0,y0,x1,y1)
 
-##
-
-class Movie(object):
-    pass
-
 ## Login Page
 
 def login_mouse_pressed(event, data):
@@ -132,6 +128,12 @@ def homescreen_mouse_pressed(event, data):
         data.bounding_boxes, data.img = get_bounding_box(data)
         data.mode = "edit"
     elif in_button(event.x, event.y, data.MAINSCREEN_BUTTON[1][0]):
+        if movie_info(data.movie_title) != False:
+            _, data.input_movie = movie_info(data.movie_title)
+            print(data.input_movie["genre_ids"], data.input_movie["release_date"][:4], "Hello")
+            recommended_movies = movie_recommend(data.input_movie["genre_ids"], data.input_movie["release_date"][:4])
+            print(recommended_movies)
+            _, data.recommended_movie = movie_info(recommended_movies[0])
         data.mode = "recommendations"
 
 def homescreen_redraw_all(canvas, data):
@@ -196,6 +198,8 @@ def edit_mouse_pressed(event,data):
             tmp_bounding_boxes.append(new_box)
         data.bounding_boxes = tmp_bounding_boxes
         data.text = text_detect(data.bounding_boxes, data.orig_img)
+        print("hello", data.text)
+        data.text = spell_check(data.text)
         data.movie_title = data.text[0]
         data.mode = "homescreen"
         
@@ -234,7 +238,22 @@ def recommendations_mouse_pressed(event, data):
     pass
 
 def recommendations_redraw_all(canvas, data):
-    pass
+    canvas.create_rectangle(0,0,data.width,data.height)
+    poster = movie_poster(data.input_movie['poster_path'])
+    poster = resize_poster(data,poster)
+    data.new_poster = ImageTk.PhotoImage(poster)
+    canvas.create_image(data.cx//2, data.cy, anchor = "c", image = data.new_poster)
+    rec_poster = movie_poster(data.recommended_movie["poster_path"])
+    rec_poster = resize_poster(data, rec_poster)
+    data.recommended_poster = ImageTk.PhotoImage(rec_poster)
+    canvas.create_image(data.cx + data.cx//2, data.cy, anchor = "c", image = data.recommended_poster)
+
+def resize_poster(data,poster):
+    height = data.height*2/3
+    w, h = poster.size
+    width = w * height/h
+    poster = poster.resize((int(width),int(height)))
+    return poster
     
 ####################################
 # use the run function as-is

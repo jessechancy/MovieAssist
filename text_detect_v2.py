@@ -17,6 +17,7 @@ import pytesseract
 from PIL import Image
 import math
 from imutils.object_detection import non_max_suppression
+from spellchecker import SpellChecker
 
 ## Bounding Boxes
 
@@ -280,8 +281,9 @@ def process_image(img):
 def resize_image(img):
     h,w = img.shape[0], img.shape[1]
     image_size_threshold = 100
-    size_factor = image_size_threshold/h
-    img = cv2.resize(img, None, fx = size_factor, fy = size_factor)
+    if h != 0:
+        size_factor = image_size_threshold/h
+        img = cv2.resize(img, None, fx = size_factor, fy = size_factor)
     return img
     
 ## Main Text Detection
@@ -296,13 +298,13 @@ def text_detect(bounding_boxes, img):
     print(text_list)
     return text_list
 
-img = cv2.imread("processed_boxes/final0.png")
-h,w,_ = img.shape
-image_size_threshold = 100
-size_factor = image_size_threshold/h
-img = cv2.resize(img, None, fx = size_factor, fy = size_factor)
-text = pytesseract.image_to_string(img)
-print(text)
+# img = cv2.imread("processed_boxes/final0.png")
+# h,w,_ = img.shape
+# image_size_threshold = 100
+# size_factor = image_size_threshold/h
+# img = cv2.resize(img, None, fx = size_factor, fy = size_factor)
+# text = pytesseract.image_to_string(img)
+# print(text)
 # img = cv2.imread("bounding_boxes/0.jpg")
 # h,w,_ = img.shape
 # w = w//4
@@ -313,5 +315,20 @@ print(text)
 
 ## Spelling Check
 
-def spell_check(word):
-    pass
+def spell_check(word_list):
+    print(word_list)
+    spell = SpellChecker()
+    misspelled = spell.unknown(word_list)
+    print(misspelled)
+    checked_list = []
+    for word in word_list:
+        if " " in word:
+            checked_word = " ".join(spell_check(word.split(" ")))
+            checked_list.append(checked_word)
+        elif word in misspelled:
+            corrected_word = spell.correction(word)
+            if corrected_word != word:
+                checked_list.append(corrected_word)
+        else:
+            checked_list.append(word)
+    return checked_list
