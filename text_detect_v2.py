@@ -261,7 +261,6 @@ def check_bound(img):
     # img = check_right(img, 10)
     return img
             
-
 def process_image(img):
     print(img.shape, "test")
     h,w,_ = img.shape
