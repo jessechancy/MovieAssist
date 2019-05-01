@@ -50,10 +50,22 @@ def movie_info(movie):
         response = response.json()
         result_count = response["total_results"]
         results_list = response["results"]
-        top_result = results_list[0]
+        #get result
+        top_result = most_popular(results_list)
         return result_count, top_result
     except:
         return False
+        
+def most_popular(results_list):
+    threshold = 1/5
+    high_vote_count = 0
+    high_result = None
+    for result in results_list:
+        vote_count = result["vote_count"]
+        if vote_count > high_vote_count:
+            high_vote_count = vote_count
+            high_result = result
+    return high_result
         
 #takes in int movieId and finds movie name
 def find_movie(movie):
@@ -80,16 +92,41 @@ def movie_poster(poster_link):
 lift_thresh = 1
 year_thresh = 5
 
-def movie_recommend(movie_info):
-    genre_id, movie_year = movie_info["genre_ids"], movie_info["release_date"][:4]
-    movie_genre = get_genres(genre_id)
+def movie_recommend(movie_genres, movie_year="2019"):
+    if isinstance(movie_genres[0], int):
+        movie_genres = get_genres(movie_genres)
+    else:
+        movie_genres = set(movie_genres)
     rules = generate_association_rules()
-    recommended_genres = related_genres(movie_genre, rules)
-    movies["genres"] = movies["genres"].map(lambda s: set(s.split("|")))
+    recommended_genres = related_genres(movie_genres, rules)
+    if not isinstance(movies["genres"][0], set):
+        movies["genres"] = movies["genres"].map(lambda s: set(s.split("|")))
+    movie_list = get_movie_list(movie_year, recommended_genres, movie_genres)
+    return movie_list
+
+def get_movie_list(movie_year, recommended_genres, movie_genres):
     movie_list = []
+    print(recommended_genres)
     for genre_rec in recommended_genres:
-        genre_rec = genre_rec.union(movie_genre)
+        genre_rec = genre_rec.union(movie_genres)
         recommended_movies = movies[movies["genres"] == (genre_rec)]
+        if len(recommended_movies) == 0:
+            empty = True
+            subsets_of_genre_rec = [genre_rec]
+            while empty:
+                genre_subset = []
+                
+                for genre_set in subsets_of_genre_rec:
+                    genre_subset.extend(subset(genre_set))
+                for sub in genre_subset[:2]:
+                    recommended_movies = movies[movies["genres"] == sub]
+                    if len(recommended_movies) != 0:
+                        print("hello")
+                        empty = False
+                        break
+                subsets_of_genre_rec = genre_subset
+                print(empty)
+        print("passed!", recommended_movies)
         for _, row in recommended_movies.iterrows():
             movie_title = row["title"]
             movie_id = row["movieId"]
@@ -139,3 +176,39 @@ def get_genres(genre_id_list):
         if genre_id in GENRES:
             genre_set.add(GENRES[genre_id])
     return genre_set
+
+## 4. Display Info
+
+def display_info(input_movie):
+    score = input_movie["vote_average"]
+    title = input_movie["original_title"]
+    lang = input_movie["original_language"]
+    release_date = input_movie["release_date"]
+    overview = reformat_text(input_movie["overview"], 50)
+    reformat_overview = overview.split("\n")
+    overview_lines = len(reformat_overview)
+    if overview_lines > 10:
+        reformat_overview[9] = reformat_overview[9] + " ... "
+        overview = "\n".join(reformat_overview[:10])
+    genre_ids = input_movie["genre_ids"]
+    genres = []
+    for id in genre_ids:
+        if id in GENRES:
+            genres.append(GENRES[id])
+    return score, title, lang, release_date, overview, genres
+    
+#cite: myself in hw3
+def reformat_text(text, text_width):
+    white_space_index = 0
+    index = 0
+    while index < len(text):
+        index = white_space_index
+        width_limit = text_width + white_space_index + 1
+        while index <= width_limit and index < len(text):
+            if text[index] == " ":
+                white_space_index = index
+            index += 1
+        if index < len(text):
+            text = text[:white_space_index] + "\n" + text[white_space_index + 1:]
+    return text
+    
