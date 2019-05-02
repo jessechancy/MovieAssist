@@ -11,7 +11,7 @@ from tkinter import filedialog
 import cv2
 import string
 from PIL import Image, ImageTk
-from text_detect_v3 import text_detect, bounding_boxes, spell_check
+from text_detect_v4 import text_detect, bounding_boxes, spell_check
 from movie_processor_v2 import movie_info, movie_poster, movie_recommend, display_info
 import numpy as np
 import threading
@@ -21,11 +21,10 @@ import time
 ## Objects
 
 class Movie_Poster(object):
-    def __init__(self, coord, poster_path=None, title=None):
+    def __init__(self, coord, poster_path=None, title=None, id=None):
         self.title = title
         self.x, self.y = coord
-        if poster_path != None:
-            self.poster_img = movie_poster(poster_path)
+        self.poster_img = movie_poster(poster_path, id)
     def draw_poster(self, canvas):
         self.poster = ImageTk.PhotoImage(self.poster_img)
         canvas.create_image(self.x, self.y, anchor="c", image=self.poster)
@@ -45,9 +44,12 @@ class Movie_Poster(object):
 
 #resize before getting bounding boxes
 class Movie_Edit(Movie_Poster):
-    def __init__(self, coord):
+    def __init__(self, coord, poster_path = None):
         super().__init__(coord)
-        poster = filedialog.askopenfilename()
+        if poster_path == None:
+            poster = filedialog.askopenfilename()
+        else:
+            poster = poster_path
         self.boxes, poster = bounding_boxes(poster)
         self.orig_poster = poster
         poster = cv2.cvtColor(poster, cv2.COLOR_BGR2RGB)
@@ -390,7 +392,8 @@ def homescreen_mouse_pressed(event, data):
                     movie_id = rec_movies_id[i]
                     _, rec_movie = movie_info(movie_id)
                     data.recommended_movies.append(rec_movie)
-                    rec_poster = Movie_Poster((data.width*(i+1)//5 + 15*i - 30, data.cy), rec_movie["poster_path"], rec_movie["original_title"])
+                    print(rec_movie["id"])
+                    rec_poster = Movie_Poster((data.width*(i+1)//5 + 15*i - 30, data.cy), rec_movie["poster_path"], rec_movie["id"])
                     rec_poster.resize(data.height//2)
                     data.recommended_posters.append(rec_poster)
                 data.mode = "recommendations"
@@ -413,7 +416,9 @@ def get_liked_genres(data):
 def execute_search(data):
     _, data.cur_movie_info = movie_info(data.movie_title)
     data.cur_poster = Movie_Poster((data.width//4, data.cy),
-                                    data.cur_movie_info['poster_path'])
+                                    data.cur_movie_info['poster_path'],
+                                    data.cur_movie_info["original_title"],
+                                    data.cur_movie_info["id"])
     data.cur_poster.resize(data.height*2//3)
 
 ## Camera
@@ -441,9 +446,11 @@ def camera_mouse_pressed(event, data):
             if button.name == "Back":
                 data.mode = "homescreen"
     if in_distance(x, y, r, event.x, event.y):
-        cv2.imwrite("frame.png", data.frame)
-        data.mode = "homescreen"
-    pass
+        cv2.imwrite("snap/snap_frame.jpg", data.frame)
+        data.edit_poster = Movie_Edit((data.cx, data.cy), "snap/snap_frame.jpg")
+        data.edit_poster.resize(data.height*4//5)
+        data.edit_poster.get_bounding_boxes()
+        data.mode = "edit"
     
 def in_distance(x, y, r, click_x, click_y):
     if ((click_x - x)**2 + (click_y - y)**2)**(1/2) <= r:
@@ -491,9 +498,13 @@ def movie_info_mouse_pressed(event, data):
                 display_num = len(rec_movies_id) if len(rec_movies_id) < 4 else 4
                 for i in range(display_num):
                     movie_id = rec_movies_id[i]
+                    print(movie_id)
                     _, rec_movie = movie_info(movie_id)
                     data.recommended_movies.append(rec_movie)
-                    rec_poster = Movie_Poster((data.width*(i+1)//5 + 15*i - 30, data.cy), rec_movie["poster_path"], rec_movie["original_title"])
+                    rec_poster = Movie_Poster((data.width*(i+1)//5 + 15*i - 30, data.cy), 
+                                              rec_movie["poster_path"], 
+                                              rec_movie["original_title"],
+                                              rec_movie["id"])
                     rec_poster.resize(data.height//2)
                     data.recommended_posters.append(rec_poster)
                 data.mode = "recommendations"
@@ -588,10 +599,6 @@ def recommendations_redraw_all(canvas, data):
         button.draw_button(canvas)
     
 ## Run Function
-    
-# Code from https://github.com/VasuAgrawal/112-opencv-tutorial/blob/master/opencvTkinterTemplate.py
-#def camera_fired(data):
-    data.frame = cv2.GaussianBlur(data.frame, (11, 11), 0)
 
 # Taken from the 15-112 webpage
 # Integrated with code from https://github.com/VasuAgrawal/112-opencv-tutorial/blob/master/opencvTkinterTemplate.py
@@ -662,7 +669,7 @@ def run(width=1000, height=600):
         end = time.time()
         diff_ms = (end - start) * 1000
         delay = int(max(data.redraw_delay - diff_ms, 5))
-        #data.root.after(delay, lambda: redraw_all_wrapper(canvas, data))
+        #data.root.after(delay, lambda: redraw_all_wrappuer(canvas, data))
         canvas.update()    
 
     # and launch the app

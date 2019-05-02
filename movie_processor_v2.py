@@ -52,6 +52,7 @@ def movie_info(movie):
         results_list = response["results"]
         #get result
         top_result = most_popular(results_list)
+        print(top_result)
         return result_count, top_result
     except:
         return False
@@ -80,12 +81,29 @@ def find_movie(movie):
 
 ## 2. Movie Poster
 
-def movie_poster(poster_link):
+def movie_poster(poster_link, movie_id):
+    print(movie_id)
+    if poster_link == None:
+        url = "https://api.themoviedb.org/3/movie/"+str(movie_id)+"/images?api_key="+API_KEY+"&language=en-US&include_image_language=en,null"
+        poster_link = movie_poster_fallback(url)
+        if poster_link == False:
+            return None
+    print(poster_link)
     url = "http://image.tmdb.org/t/p/original" + poster_link
     response = urllib.request.urlretrieve(url, "tmp_search_poster.jpg")
     img = Image.open("tmp_search_poster.jpg")
     return img
 
+def movie_poster_fallback(url):
+    response = requests.get(url)
+    try:
+        response = response.json()
+        poster_link = response["posters"][0]["file_path"]
+    except:
+        return False
+    return poster_link
+        
+    
 ## 3. Recommend Movie
 
 # Set Recommendation Parameters
